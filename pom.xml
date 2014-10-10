@@ -9,7 +9,7 @@
 
 	<groupId>de.mklinger.commons</groupId>
 	<artifactId>junit</artifactId>
-	<version>0.1-SNAPSHOT</version>
+	<version>0.1</version>
 
 	<licenses>
 		<license>
@@ -30,7 +30,7 @@
 	<scm>
 		<connection>scm:git:git@mklinger.de:junit.git</connection>
 		<developerConnection>scm:git:git@mklinger.de:junit.git</developerConnection>
-		<tag>HEAD</tag>
+		<tag>junit-0.1</tag>
 	</scm>
 
 	<repositories>
