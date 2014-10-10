@@ -21,7 +21,7 @@ package de.mklinger.commons.junit;
  * @author Marc Klinger - mklinger[at]mklinger[dot]de
  * @author Inspired by http://programmaticallyspeaking.blogspot.de/2008/10/run-time-equivalent-to-junits-ignore.html
  */
-public final class RuntimeIgnore {
+public class RuntimeIgnore {
 	static class RuntimeIgnoreException extends RuntimeException {
 		private static final long serialVersionUID = 1L;
 		RuntimeIgnoreException() {
