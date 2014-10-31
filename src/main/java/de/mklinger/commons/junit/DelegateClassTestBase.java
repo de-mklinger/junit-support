@@ -26,7 +26,7 @@ import org.junit.Test;
 
 /**
  * Tests a delegate class.
- * @author Marc Klinger - mklinger[at]nightlabs[dot]de
+ * @author Marc Klinger - mklinger[at]mklinger[dot]de
  */
 @Ignore("Not a test")
 public class DelegateClassTestBase {

@@ -19,7 +19,7 @@ import org.junit.runners.Parameterized;
 
 /**
  * A test runner that allows to programmatically ignore tests.
- * @author Marc Klinger - mklinger[at]mklinger[dot]de - klingerm
+ * @author Marc Klinger - mklinger[at]mklinger[dot]de
  * @author Inspired by http://programmaticallyspeaking.blogspot.de/2008/10/run-time-equivalent-to-junits-ignore.html
  */
 public class RuntimeIgnoreableParameterizedTestRunner extends Parameterized {

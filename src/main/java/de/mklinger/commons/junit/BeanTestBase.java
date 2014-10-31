@@ -235,14 +235,13 @@ public class BeanTestBase<T> {
 		ParameterizedType parameterizedType = null;
 		if (type instanceof Class<?>) {
 			clazz = (Class<?>) type;
-		} else
-			if (type instanceof ParameterizedType) {
-				parameterizedType = (ParameterizedType) type;
-				final Type rawType = parameterizedType.getRawType();
-				if (rawType instanceof Class<?>) {
-					clazz = (Class<?>) rawType;
-				}
+		} else if (type instanceof ParameterizedType) {
+			parameterizedType = (ParameterizedType) type;
+			final Type rawType = parameterizedType.getRawType();
+			if (rawType instanceof Class<?>) {
+				clazz = (Class<?>) rawType;
 			}
+		}
 		if (clazz != null && clazz.isArray()) {
 			final Object array = Array.newInstance(clazz.getComponentType(), CREATED_ARRAY_LENGTH);
 			for (int i = 0; i < CREATED_ARRAY_LENGTH; i++) {
