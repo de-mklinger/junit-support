@@ -37,7 +37,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +46,6 @@ import org.slf4j.LoggerFactory;
  * @author Marc Klinger - marc[at]nightlabs[dot]de
  */
 @Ignore("Not a test")
-@RunWith(RuntimeIgnoreableTestRunner.class)
 public class BeanTestBase<T> {
 	/** Default constructor parameters. */
 	protected static final ConstructorParameters DEFAULT_CONSTRUCTOR_PARAMETERS = new ConstructorParameters(new Class<?>[0], new String[0]);

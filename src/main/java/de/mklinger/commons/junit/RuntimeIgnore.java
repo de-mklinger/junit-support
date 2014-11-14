@@ -14,37 +14,29 @@
  */
 package de.mklinger.commons.junit;
 
+import org.junit.internal.AssumptionViolatedException;
+
 /**
  * Runtime test ignore util class.
- * @see RuntimeIgnoreableTestRunner
- * @see RuntimeIgnoreableParameterizedTestRunner
  * @author Marc Klinger - mklinger[at]mklinger[dot]de
- * @author Inspired by http://programmaticallyspeaking.blogspot.de/2008/10/run-time-equivalent-to-junits-ignore.html
  */
 public class RuntimeIgnore {
-	static class RuntimeIgnoreException extends RuntimeException {
-		private static final long serialVersionUID = 1L;
-		RuntimeIgnoreException() {
-			super("If you see this, then you have forgot to run the test-case with the " + RuntimeIgnoreableTestRunner.class.getName() + " JUnit runner.");
-		}
-	}
-
 	private RuntimeIgnore() {
 	}
 
 	public static void ignore() {
-		throw new RuntimeIgnoreException();
+		throw new AssumptionViolatedException("Test ignored");
 	}
 
 	public static void ignoreIf(final boolean shouldIgnore) {
 		if (shouldIgnore) {
-			throw new RuntimeIgnoreException();
+			throw new AssumptionViolatedException("Test ignored");
 		}
 	}
 
 	public static void ignoreIfNot(final boolean shouldNotIgnore) {
 		if (!shouldNotIgnore) {
-			throw new RuntimeIgnoreException();
+			throw new AssumptionViolatedException("Test ignored");
 		}
 	}
 }
