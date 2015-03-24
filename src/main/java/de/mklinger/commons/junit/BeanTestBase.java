@@ -37,6 +37,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.internal.ExactComparisonCriteria;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -479,7 +480,7 @@ public class BeanTestBase<T> {
 	}
 
 	/**
-	 * Assert equals with support for Double/double and Float/float.
+	 * Assert equals with support for Double/double and Float/float, arrays and collections.
 	 */
 	protected static void assertEquals(final String message, final Object expected, final Object actual) {
 		if (expected != null && actual != null) {
@@ -489,6 +490,39 @@ public class BeanTestBase<T> {
 			} else if ((expected.getClass() == Float.TYPE || expected.getClass() == Float.class) && (actual.getClass() == Float.TYPE || actual.getClass() == Float.class)) {
 				Assert.assertEquals(((Float) expected).floatValue(), ((Float) actual).floatValue(), DELTA);
 				return;
+			} else if (expected.getClass().isArray() && actual.getClass().isArray()) {
+				if (expected.getClass().getComponentType() == Integer.TYPE && actual.getClass().getComponentType() == Integer.TYPE) {
+					Assert.assertArrayEquals((int[])expected, (int[])actual);
+					return;
+				} else if (expected.getClass().getComponentType() == Byte.TYPE && actual.getClass().getComponentType() == Byte.TYPE) {
+					Assert.assertArrayEquals((byte[])expected, (byte[])actual);
+					return;
+				} else if (expected.getClass().getComponentType() == Character.TYPE && actual.getClass().getComponentType() == Character.TYPE) {
+					Assert.assertArrayEquals((char[])expected, (char[])actual);
+					return;
+				} else if (expected.getClass().getComponentType() == Long.TYPE && actual.getClass().getComponentType() == Long.TYPE) {
+					Assert.assertArrayEquals((long[])expected, (long[])actual);
+					return;
+				} else if (expected.getClass().getComponentType() == Short.TYPE && actual.getClass().getComponentType() == Short.TYPE) {
+					Assert.assertArrayEquals((short[])expected, (short[])actual);
+					return;
+				} else if (expected.getClass().getComponentType() == Boolean.TYPE && actual.getClass().getComponentType() == Boolean.TYPE) {
+					// junit doesn't support boolean arrays :-( use internal class
+					new ExactComparisonCriteria().arrayEquals(message, expected, actual);
+					return;
+				} else if (expected.getClass().getComponentType() == Double.TYPE && actual.getClass().getComponentType() == Double.TYPE) {
+					Assert.assertArrayEquals((double[])expected, (double[])actual, DELTA);
+					return;
+				} else if (expected.getClass().getComponentType() == Float.TYPE && actual.getClass().getComponentType() == Float.TYPE) {
+					Assert.assertArrayEquals((float[])expected, (float[])actual, DELTA);
+					return;
+				}
+				try {
+					Assert.assertArrayEquals((Object[])expected, (Object[])actual);
+					return;
+				} catch (final ClassCastException e) {
+					// fall through
+				}
 			} else if (Collection.class.isAssignableFrom(expected.getClass()) && !List.class.isAssignableFrom(expected.getClass())) {
 				assertEquals(message, (Collection<?>)expected, (Collection<?>)actual);
 				return;
