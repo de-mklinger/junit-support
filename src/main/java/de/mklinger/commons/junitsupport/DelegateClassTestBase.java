@@ -1,4 +1,5 @@
-/* Copyright 2014 mklinger GmbH
+/*
+ * Copyright 2014-present mklinger GmbH - http://www.mklinger.de
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package de.mklinger.commons.junit;
+package de.mklinger.commons.junitsupport;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
