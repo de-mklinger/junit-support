@@ -483,7 +483,7 @@ public class BeanTestBase<T> {
 	/**
 	 * Assert equals with support for Double/double and Float/float, arrays and collections.
 	 */
-	protected static void assertEquals(final String message, final Object expected, final Object actual) {
+	protected void assertEquals(final String message, final Object expected, final Object actual) {
 		if (expected != null && actual != null) {
 			if ((expected.getClass() == Double.TYPE || expected.getClass() == Double.class) && (actual.getClass() == Double.TYPE || actual.getClass() == Double.class)) {
 				Assert.assertEquals(((Double) expected).doubleValue(), ((Double) actual).doubleValue(), DELTA);
@@ -532,7 +532,7 @@ public class BeanTestBase<T> {
 		Assert.assertEquals(message, expected, actual);
 	}
 
-	protected static void assertEquals(final String message, final Collection<?> expected, final Collection<?> actual) {
+	protected void assertEquals(final String message, final Collection<?> expected, final Collection<?> actual) {
 		if (expected == actual) {
 			return;
 		}
