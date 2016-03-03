@@ -618,13 +618,15 @@ public class BeanTestBase<T> {
 			final Map<String, Object> propertyValues = fillBean(bean, constructorPropertyNames);
 
 			// test constructor values
-			final Object[] constructorPropertyValues = allConstructorPropertyValues.get(constructorParameters.getTypes());
-			for (int i = 0; i < constructorPropertyValues.length; i++) {
-				final Object expectedValue = constructorPropertyValues[i];
-				final String propertyName = constructorPropertyNames[i];
-				if (!isIgnoreProperty(propertyName)) {
-					final Object actualValue = getFieldValue(bean, propertyName);
-					assertEquals("Constructor property value " + propertyName, expectedValue, actualValue);
+			if (allConstructorPropertyValues != null) {
+				final Object[] constructorPropertyValues = allConstructorPropertyValues.get(constructorParameters.getTypes());
+				for (int i = 0; i < constructorPropertyValues.length; i++) {
+					final Object expectedValue = constructorPropertyValues[i];
+					final String propertyName = constructorPropertyNames[i];
+					if (!isIgnoreProperty(propertyName)) {
+						final Object actualValue = getFieldValue(bean, propertyName);
+						assertEquals("Constructor property value " + propertyName, expectedValue, actualValue);
+					}
 				}
 			}
 
@@ -686,13 +688,15 @@ public class BeanTestBase<T> {
 				final T copiedBean = copyConstructor.newInstance(bean);
 
 				// test constructor values
-				final Object[] constructorPropertyValues = allConstructorPropertyValues.get(constructorParameters.getTypes());
-				for (int i = 0; i < constructorPropertyValues.length; i++) {
-					final Object expectedValue = constructorPropertyValues[i];
-					final String propertyName = constructorPropertyNames[i];
-					if (!isIgnoreProperty(propertyName)) {
-						final Object actualValue = getFieldValue(copiedBean, propertyName);
-						assertEquals("Constructor property value " + propertyName, expectedValue, actualValue);
+				if (allConstructorPropertyValues != null) {
+					final Object[] constructorPropertyValues = allConstructorPropertyValues.get(constructorParameters.getTypes());
+					for (int i = 0; i < constructorPropertyValues.length; i++) {
+						final Object expectedValue = constructorPropertyValues[i];
+						final String propertyName = constructorPropertyNames[i];
+						if (!isIgnoreProperty(propertyName)) {
+							final Object actualValue = getFieldValue(copiedBean, propertyName);
+							assertEquals("Constructor property value " + propertyName, expectedValue, actualValue);
+						}
 					}
 				}
 
