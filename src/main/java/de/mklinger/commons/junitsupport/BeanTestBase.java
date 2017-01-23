@@ -23,6 +23,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -32,6 +33,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -61,7 +63,7 @@ public class BeanTestBase<T> {
 	private static final String CLASS_AND_FIELD_SEPERATOR = "#";
 
 	private final Class<T> beanClass;
-	private long nextValue = 1;
+	private final Random random;
 	private Map<Class<?>[], Object[]> allConstructorPropertyValues;
 
 	/**
@@ -108,6 +110,20 @@ public class BeanTestBase<T> {
 	 */
 	public BeanTestBase(final Class<T> beanClass) {
 		this.beanClass = beanClass;
+		this.random = new Random(getSeed());
+	}
+
+	private final long getSeed() {
+		String propertyName = getClass().getName() + ".seed";
+		String s = System.getProperty(propertyName);
+		long value;
+		if (s != null && !s.isEmpty()) {
+			value = Long.parseLong(s);
+		} else {
+			value = new SecureRandom().nextLong();
+		}
+		LOG.info("Set system property {}={} to reproduce test values", propertyName, value);
+		return value;
 	}
 
 	private static void addAllFields(final Class<?> clazz, final List<Field> allFields) {
@@ -123,7 +139,7 @@ public class BeanTestBase<T> {
 	 * @return All fields
 	 */
 	private Field[] getAllFields() {
-		final List<Field> allFields = new ArrayList<Field>();
+		final List<Field> allFields = new ArrayList<>();
 		addAllFields(beanClass, allFields);
 		return allFields.toArray(new Field[allFields.size()]);
 	}
@@ -146,7 +162,7 @@ public class BeanTestBase<T> {
 	 * @return All setters
 	 */
 	private Method[] getAllSetters() {
-		final List<Method> allSetters = new ArrayList<Method>();
+		final List<Method> allSetters = new ArrayList<>();
 		addAllSetters(beanClass, allSetters);
 		return allSetters.toArray(new Method[allSetters.size()]);
 	}
@@ -157,7 +173,7 @@ public class BeanTestBase<T> {
 	 * @return The bean property names
 	 */
 	protected Collection<String> getBeanPropertyNames() {
-		final Collection<String> beanPropertyNames = new HashSet<String>();
+		final Collection<String> beanPropertyNames = new HashSet<>();
 		final Field[] allFields = getAllFields();
 		for (final Field field : allFields) {
 			if (isBeanFieldCandidate(field)) {
@@ -186,7 +202,7 @@ public class BeanTestBase<T> {
 	 */
 	protected Collection<Field> getBeanFields() {
 		final Collection<String> beanPropertyNames = getBeanPropertyNames();
-		final Collection<Field> beanFields = new ArrayList<Field>(beanPropertyNames.size());
+		final Collection<Field> beanFields = new ArrayList<>(beanPropertyNames.size());
 		for (final String propertyName : beanPropertyNames) {
 			Field field;
 			try {
@@ -220,9 +236,7 @@ public class BeanTestBase<T> {
 
 	/** Get the next test value. */
 	protected long getNextTestValue() {
-		final long value = nextValue;
-		nextValue++;
-		return value;
+		return random.nextLong();
 	}
 
 	/**
@@ -259,7 +273,7 @@ public class BeanTestBase<T> {
 				LOG.debug("Error getting enum value", e);
 			}
 		} else if (parameterizedType != null && parameterizedType.getRawType() == Map.class) {
-			final Map<Object, Object> result = new HashMap<Object, Object>();
+			final Map<Object, Object> result = new HashMap<>();
 			final Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
 			if (actualTypeArguments.length != 2) {
 				throw new IllegalStateException("Have map with actualTypeArguments.length != 2");
@@ -269,19 +283,19 @@ public class BeanTestBase<T> {
 			}
 			return Collections.unmodifiableMap(result);
 		} else if (parameterizedType != null && parameterizedType.getRawType() == List.class) {
-			final List<Object> result = new ArrayList<Object>();
+			final List<Object> result = new ArrayList<>();
 			addValuesToCollection(result, parameterizedType);
 			return Collections.unmodifiableList(result);
 		} else if (parameterizedType != null && parameterizedType.getRawType() == Set.class) {
-			final Set<Object> result = new HashSet<Object>();
+			final Set<Object> result = new HashSet<>();
 			addValuesToCollection(result, parameterizedType);
 			return Collections.unmodifiableSet(result);
 		} else if (parameterizedType != null && parameterizedType.getRawType() == Collection.class) {
-			final Collection<Object> result = new HashSet<Object>();
+			final Collection<Object> result = new HashSet<>();
 			addValuesToCollection(result, parameterizedType);
 			return Collections.unmodifiableCollection(result);
 		} else if (parameterizedType != null && parameterizedType.getRawType() == AtomicReference.class) {
-			final AtomicReference<Object> result = new AtomicReference<Object>();
+			final AtomicReference<Object> result = new AtomicReference<>();
 			final Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
 			if (actualTypeArguments.length != 1) {
 				throw new IllegalStateException("Have parameterizedType with actualTypeArguments.length != 1");
@@ -457,7 +471,7 @@ public class BeanTestBase<T> {
 		final Constructor<T> constructor = beanClass.getDeclaredConstructor(types);
 		constructor.setAccessible(true);
 		if (allConstructorPropertyValues == null) {
-			allConstructorPropertyValues = new HashMap<Class<?>[], Object[]>();
+			allConstructorPropertyValues = new HashMap<>();
 		}
 		Object[] propertyValues = allConstructorPropertyValues.get(types);
 		if (propertyValues == null) {
@@ -574,7 +588,7 @@ public class BeanTestBase<T> {
 	private static Set<String> toSet(final String[] s) {
 		Set<String> set = null;
 		if (s != null && s.length > 0) {
-			set = new HashSet<String>(s.length);
+			set = new HashSet<>(s.length);
 			Collections.addAll(set, s);
 		}
 		return set;
@@ -585,7 +599,7 @@ public class BeanTestBase<T> {
 	 */
 	protected Map<String, Object> fillBean(final T bean, final String[] propertiesToOmit) throws IllegalAccessException, InvocationTargetException, NoSuchFieldException {
 		final Set<String> propsToOmit = toSet(propertiesToOmit);
-		final Map<String, Object> result = new HashMap<String, Object>();
+		final Map<String, Object> result = new HashMap<>();
 		final Collection<String> beanPropertyNames = getBeanPropertyNames();
 		for (final String propertyName : beanPropertyNames) {
 			if (propsToOmit == null || !propsToOmit.contains(propertyName)) {
