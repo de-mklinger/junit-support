@@ -61,10 +61,12 @@ public class BeanTestBase<T> {
 	private static final float DELTA = 0.0000000000001f;
 	private static final int CREATED_ARRAY_MIN_LENGTH = 3;
 	private static final int CREATED_ARRAY_MAX_LENGTH = 10;
+	private static final int DEFAULT_TEST_RUNS = 20;
 
 	private final Class<T> beanClass;
 	private final Random random;
 	private Map<Class<?>[], Object[]> allConstructorPropertyValues;
+	private int testRuns;
 
 	/**
 	 * Constructor parameter descriptor.
@@ -109,8 +111,17 @@ public class BeanTestBase<T> {
 	 * @param beanClass The bean class to test
 	 */
 	public BeanTestBase(final Class<T> beanClass) {
+		this(beanClass, DEFAULT_TEST_RUNS);
+	}
+
+	/**
+	 * Create a new BeanTestBase instance.
+	 * @param beanClass The bean class to test
+	 */
+	public BeanTestBase(final Class<T> beanClass, int testRuns) {
 		this.beanClass = beanClass;
 		this.random = new Random(getSeed());
+		this.testRuns = testRuns;
 	}
 
 	private final long getSeed() {
@@ -657,6 +668,12 @@ public class BeanTestBase<T> {
 	 */
 	@Test
 	public void propertyTestForAllConstructors() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException {
+		for (int i = 0; i < testRuns; i++) {
+			propertyTestForAllConstructorsImpl();
+		}
+	}
+
+	protected void propertyTestForAllConstructorsImpl() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException {
 		final ConstructorParameters[] allConstructorParameters = getConstructorParameters();
 
 		for (final ConstructorParameters constructorParameters : allConstructorParameters) {
@@ -696,6 +713,12 @@ public class BeanTestBase<T> {
 	 */
 	@Test
 	public void copyConstructorEqualsTest() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException {
+		for (int i = 0; i < testRuns; i++) {
+			copyConstructorEqualsTestImpl();
+		}
+	}
+
+	protected void copyConstructorEqualsTestImpl() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException {
 		if (declaresEquals()) {
 			final Constructor<T> copyConstructor = getCopyConstructor();
 			if (copyConstructor != null) {
@@ -727,6 +750,12 @@ public class BeanTestBase<T> {
 	 */
 	@Test
 	public void copyConstructorValuesTest() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException {
+		for (int i = 0; i < testRuns; i++) {
+			copyConstructorValuesTestImpl();
+		}
+	}
+
+	protected void copyConstructorValuesTestImpl() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException {
 		final Constructor<T> copyConstructor = getCopyConstructor();
 		if (copyConstructor != null) {
 			final ConstructorParameters[] allConstructorParameters = getConstructorParameters();
@@ -775,6 +804,12 @@ public class BeanTestBase<T> {
 	 */
 	@Test
 	public void copyConstructorEmptyEqualsTest() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException {
+		for (int i = 0; i < testRuns; i++) {
+			copyConstructorEmptyEqualsTestImpl();
+		}
+	}
+
+	protected void copyConstructorEmptyEqualsTestImpl() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException {
 		if (declaresEquals()) {
 			final Constructor<T> copyConstructor = getCopyConstructor();
 			if (copyConstructor != null) {
@@ -804,6 +839,12 @@ public class BeanTestBase<T> {
 	 */
 	@Test
 	public void copyConstructorEmptyValuesTest() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException {
+		for (int i = 0; i < testRuns; i++) {
+			copyConstructorEmptyValuesTestImpl();
+		}
+	}
+
+	protected void copyConstructorEmptyValuesTestImpl() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException {
 		final Constructor<T> copyConstructor = getCopyConstructor();
 		if (copyConstructor != null) {
 			final ConstructorParameters[] allConstructorParameters = getConstructorParameters();
@@ -870,6 +911,12 @@ public class BeanTestBase<T> {
 	 */
 	@Test
 	public void toStringTestForAllConstructorsEmpty() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException {
+		for (int i = 0; i < testRuns; i++) {
+			toStringTestForAllConstructorsEmptyImpl();
+		}
+	}
+
+	protected void toStringTestForAllConstructorsEmptyImpl() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException {
 		final ConstructorParameters[] allConstructorParameters = getConstructorParameters();
 		for (final ConstructorParameters constructorParameters : allConstructorParameters) {
 			if (LOG.isInfoEnabled()) {
@@ -877,6 +924,7 @@ public class BeanTestBase<T> {
 			}
 			final T bean = createInstance(constructorParameters);
 			Assert.assertNotNull(bean.toString());
+			Assert.assertNotEquals("", bean.toString());
 		}
 	}
 
@@ -885,6 +933,12 @@ public class BeanTestBase<T> {
 	 */
 	@Test
 	public void toStringTestForAllConstructorsFilled() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException {
+		for (int i = 0; i < testRuns; i++) {
+			toStringTestForAllConstructorsFilledImpl();
+		}
+	}
+
+	protected void toStringTestForAllConstructorsFilledImpl() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException {
 		final ConstructorParameters[] allConstructorParameters = getConstructorParameters();
 		for (final ConstructorParameters constructorParameters : allConstructorParameters) {
 			if (LOG.isInfoEnabled()) {
@@ -894,6 +948,7 @@ public class BeanTestBase<T> {
 			final String[] constructorPropertyNames = constructorParameters.getPropertyNames();
 			fillBean(bean, constructorPropertyNames);
 			Assert.assertNotNull(bean.toString());
+			Assert.assertNotEquals("", bean.toString());
 		}
 	}
 
@@ -902,6 +957,12 @@ public class BeanTestBase<T> {
 	 */
 	@Test
 	public void equalsIdentityTest() throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException, NoSuchMethodException {
+		for (int i = 0; i < testRuns; i++) {
+			equalsIdentityTestImpl();
+		}
+	}
+
+	protected void equalsIdentityTestImpl() throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException, NoSuchMethodException {
 		if (declaresEquals()) {
 			final ConstructorParameters[] allConstructorParameters = getConstructorParameters();
 			for (final ConstructorParameters constructorParameters : allConstructorParameters) {
@@ -925,6 +986,13 @@ public class BeanTestBase<T> {
 	 */
 	@Test
 	public void equalsValuesTest() throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException, NoSuchMethodException {
+		for (int i = 0; i < testRuns; i++) {
+			equalsValuesTestImpl();
+		}
+
+	}
+
+	protected void equalsValuesTestImpl() throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException, NoSuchMethodException {
 		if (declaresEquals()) {
 			final ConstructorParameters[] allConstructorParameters = getConstructorParameters();
 			for (final ConstructorParameters constructorParameters : allConstructorParameters) {
@@ -952,6 +1020,12 @@ public class BeanTestBase<T> {
 	 */
 	@Test
 	public void hashCodeTest() throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException, NoSuchMethodException {
+		for (int i = 0; i < testRuns; i++) {
+			hashCodeTestImpl();
+		}
+	}
+
+	protected void hashCodeTestImpl() throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException, NoSuchMethodException {
 		if (declaresHashCode()) {
 			final ConstructorParameters[] allConstructorParameters = getConstructorParameters();
 			for (final ConstructorParameters constructorParameters : allConstructorParameters) {
