@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Generic bean test.
  * @param <T> The bean type
- * @author Marc Klinger - marc[at]nightlabs[dot]de
+ * @author Marc Klinger - mklinger[at]mklinger[dot]de
  */
 @Ignore("Not a test")
 public class BeanTestBase<T> {
@@ -59,8 +59,8 @@ public class BeanTestBase<T> {
 	private static final String SETTER_PREFIX = "set";
 	private static final int TIME_MULT = 100000;
 	private static final float DELTA = 0.0000000000001f;
-	private static final int CREATED_ARRAY_LENGTH = 5;
-	private static final String CLASS_AND_FIELD_SEPERATOR = "#";
+	private static final int CREATED_ARRAY_MIN_LENGTH = 3;
+	private static final int CREATED_ARRAY_MAX_LENGTH = 10;
 
 	private final Class<T> beanClass;
 	private final Random random;
@@ -106,7 +106,7 @@ public class BeanTestBase<T> {
 
 	/**
 	 * Create a new BeanTestBase instance.
-	 * @param beanClass The bean class
+	 * @param beanClass The bean class to test
 	 */
 	public BeanTestBase(final Class<T> beanClass) {
 		this.beanClass = beanClass;
@@ -257,8 +257,9 @@ public class BeanTestBase<T> {
 			}
 		}
 		if (clazz != null && clazz.isArray()) {
-			final Object array = Array.newInstance(clazz.getComponentType(), CREATED_ARRAY_LENGTH);
-			for (int i = 0; i < CREATED_ARRAY_LENGTH; i++) {
+			int len = createArrayLength();
+			final Object array = Array.newInstance(clazz.getComponentType(), len);
+			for (int i = 0; i < len; i++) {
 				Array.set(array, i, createValue(clazz.getComponentType()));
 			}
 			return array;
@@ -266,7 +267,7 @@ public class BeanTestBase<T> {
 			try {
 				final Method valuesMethod = clazz.getMethod("values", new Class<?>[0]);
 				final Object[] values = (Object[]) valuesMethod.invoke(null, new Object[0]);
-				final int n = (Integer) createValue(Integer.TYPE);
+				final int n = createUnsignedInt();
 				return values[n % values.length];
 			} catch (final Exception e) {
 				// ignore
@@ -278,7 +279,8 @@ public class BeanTestBase<T> {
 			if (actualTypeArguments.length != 2) {
 				throw new IllegalStateException("Have map with actualTypeArguments.length != 2");
 			}
-			for (int i = 0; i < CREATED_ARRAY_LENGTH; i++) {
+			int len = createArrayLength();
+			for (int i = 0; i < len; i++) {
 				result.put(createValue(actualTypeArguments[0]), createValue(actualTypeArguments[1]));
 			}
 			return Collections.unmodifiableMap(result);
@@ -328,12 +330,46 @@ public class BeanTestBase<T> {
 		throw new UnsupportedOperationException("Test " + getClass() + " must override createValue(Type type) and return a value for type " + type);
 	}
 
+	private int createUnsignedInt() {
+		int n;
+		do {
+			n = (int) createValue(Integer.TYPE);
+		} while (n == Integer.MAX_VALUE);
+		n = Math.abs(n);
+		assert n >= 0;
+		return n;
+	}
+
+	private int createUnsignedInt(int max) {
+		assert max >= 0;
+		int n = createUnsignedInt() % (max + 1);
+		assert n >= 0;
+		assert n <= max;
+		return n;
+	}
+
+	private int createUnsignedInt(int min, int max) {
+		assert min >= 0;
+		assert max >= 0;
+		assert min <= max;
+		int n = createUnsignedInt(max - min) + min;
+		assert n >= 0;
+		assert n >= min;
+		assert n <= max;
+		return n;
+	}
+
+	private int createArrayLength() {
+		return createUnsignedInt(CREATED_ARRAY_MIN_LENGTH, CREATED_ARRAY_MAX_LENGTH);
+	}
+
 	private void addValuesToCollection(final Collection<Object> result, final ParameterizedType parameterizedType) {
 		final Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
 		if (actualTypeArguments.length != 1) {
 			throw new IllegalStateException("Have collection with actualTypeArguments.length != 1");
 		}
-		for (int i = 0; i < CREATED_ARRAY_LENGTH; i++) {
+		int len = createArrayLength();
+		for (int i = 0; i < len; i++) {
 			result.add(createValue(actualTypeArguments[0]));
 		}
 	}
@@ -374,8 +410,7 @@ public class BeanTestBase<T> {
 		try {
 			return getMethod(beanClass, setterName, new Class<?>[] {propertyType});
 		} catch (final NoSuchMethodException e) {
-			LOG.warn("No setter found for property: " + beanClass.getName() + CLASS_AND_FIELD_SEPERATOR
-					+ propertyName);
+			LOG.warn("No setter found for property: {}#{}", beanClass.getName(), propertyName);
 			return null;
 		}
 	}
@@ -395,8 +430,7 @@ public class BeanTestBase<T> {
 			try {
 				return getMethod(beanClass, getterName, new Class<?>[0]);
 			} catch (final NoSuchMethodException e2) {
-				LOG.warn("No getter found for property: " + beanClass.getName() + CLASS_AND_FIELD_SEPERATOR
-						+ propertyName);
+				LOG.warn("No getter found for property: {}#{}", beanClass.getName(), propertyName);
 				return null;
 			}
 		}
@@ -626,7 +660,7 @@ public class BeanTestBase<T> {
 		final ConstructorParameters[] allConstructorParameters = getConstructorParameters();
 
 		for (final ConstructorParameters constructorParameters : allConstructorParameters) {
-			LOG.info("Testing properties for constructor with parameter types " + Arrays.toString(constructorParameters.getTypes()));
+			LOG.info("Testing properties for constructor with parameter types {}", Arrays.toString(constructorParameters.getTypes()));
 			final T bean = createInstance(constructorParameters);
 			final String[] constructorPropertyNames = constructorParameters.getPropertyNames();
 			final Map<String, Object> propertyValues = fillBean(bean, constructorPropertyNames);
@@ -667,7 +701,9 @@ public class BeanTestBase<T> {
 			if (copyConstructor != null) {
 				final ConstructorParameters[] allConstructorParameters = getConstructorParameters();
 				for (final ConstructorParameters constructorParameters : allConstructorParameters) {
-					LOG.info("Testing equals (equality) for constructor with parameter types " + Arrays.toString(constructorParameters.getTypes()));
+					if (LOG.isInfoEnabled()) {
+						LOG.info("Testing equals (equality) for constructor with parameter types {}", Arrays.toString(constructorParameters.getTypes()));
+					}
 					final String[] constructorPropertyNames = constructorParameters.getPropertyNames();
 					final T bean1 = createInstance(constructorParameters);
 					fillBean(bean1, constructorPropertyNames);
@@ -675,12 +711,12 @@ public class BeanTestBase<T> {
 					Assert.assertEquals("Bean created with copy constructor is not equal to original bean", bean1, bean2);
 				}
 			} else {
-				LOG.info(String.format("Skipping copy constructor / equals (values) test as '%s' does not implement a copy constructor.", beanClass.getName()));
+				LOG.info("Skipping copy constructor / equals (values) test as '{}' does not implement a copy constructor.", beanClass.getName());
 				// ignore this test
 				RuntimeIgnore.ignore();
 			}
 		} else {
-			LOG.info(String.format("Skipping copy constructor / equals (values) test as '%s' does not implement equals.", beanClass.getName()));
+			LOG.info("Skipping copy constructor / equals (values) test as '{}' does not implement equals.", beanClass.getName());
 			// ignore this test
 			RuntimeIgnore.ignore();
 		}
@@ -695,7 +731,9 @@ public class BeanTestBase<T> {
 		if (copyConstructor != null) {
 			final ConstructorParameters[] allConstructorParameters = getConstructorParameters();
 			for (final ConstructorParameters constructorParameters : allConstructorParameters) {
-				LOG.info("Testing properties for copy constructor vs. constructor with parameter types " + Arrays.toString(constructorParameters.getTypes()));
+				if (LOG.isInfoEnabled()) {
+					LOG.info("Testing properties for copy constructor vs. constructor with parameter types {}", Arrays.toString(constructorParameters.getTypes()));
+				}
 				final T bean = createInstance(constructorParameters);
 				final String[] constructorPropertyNames = constructorParameters.getPropertyNames();
 				final Map<String, Object> propertyValues = fillBean(bean, constructorPropertyNames);
@@ -726,7 +764,7 @@ public class BeanTestBase<T> {
 				}
 			}
 		} else {
-			LOG.info(String.format("Skipping copy constructor test as '%s' does not implement a copy constructor.", beanClass.getName()));
+			LOG.info("Skipping copy constructor test as '{}' does not implement a copy constructor.", beanClass.getName());
 			// ignore this test
 			RuntimeIgnore.ignore();
 		}
@@ -742,18 +780,20 @@ public class BeanTestBase<T> {
 			if (copyConstructor != null) {
 				final ConstructorParameters[] allConstructorParameters = getConstructorParameters();
 				for (final ConstructorParameters constructorParameters : allConstructorParameters) {
-					LOG.info("Testing equals (equality) for constructor with parameter types " + Arrays.toString(constructorParameters.getTypes()));
+					if (LOG.isInfoEnabled()) {
+						LOG.info("Testing equals (equality) for constructor with parameter types {}", Arrays.toString(constructorParameters.getTypes()));
+					}
 					final T bean1 = createInstance(constructorParameters);
 					final T bean2 = copyConstructor.newInstance(bean1);
 					Assert.assertEquals("Bean created with copy constructor is not equal to original bean", bean1, bean2);
 				}
 			} else {
-				LOG.info(String.format("Skipping copy constructor / equals (values) test as '%s' does not implement a copy constructor.", beanClass.getName()));
+				LOG.info("Skipping copy constructor / equals (values) test as '{}' does not implement a copy constructor.", beanClass.getName());
 				// ignore this test
 				RuntimeIgnore.ignore();
 			}
 		} else {
-			LOG.info(String.format("Skipping copy constructor / equals (values) test as '%s' does not implement equals.", beanClass.getName()));
+			LOG.info("Skipping copy constructor / equals (values) test as '{}' does not implement equals.", beanClass.getName());
 			// ignore this test
 			RuntimeIgnore.ignore();
 		}
@@ -768,7 +808,9 @@ public class BeanTestBase<T> {
 		if (copyConstructor != null) {
 			final ConstructorParameters[] allConstructorParameters = getConstructorParameters();
 			for (final ConstructorParameters constructorParameters : allConstructorParameters) {
-				LOG.info("Testing properties for copy constructor vs. constructor with parameter types " + Arrays.toString(constructorParameters.getTypes()));
+				if (LOG.isInfoEnabled()) {
+					LOG.info("Testing properties for copy constructor vs. constructor with parameter types {}", Arrays.toString(constructorParameters.getTypes()));
+				}
 				final T bean = createInstance(constructorParameters);
 				final String[] constructorPropertyNames = constructorParameters.getPropertyNames();
 				final T copiedBean = copyConstructor.newInstance(bean);
@@ -785,7 +827,7 @@ public class BeanTestBase<T> {
 				}
 			}
 		} else {
-			LOG.info(String.format("Skipping copy constructor test as '%s' does not implement a copy constructor.", beanClass.getName()));
+			LOG.info("Skipping copy constructor test as '{}' does not implement a copy constructor.", beanClass.getName());
 			// ignore this test
 			RuntimeIgnore.ignore();
 		}
@@ -830,7 +872,9 @@ public class BeanTestBase<T> {
 	public void toStringTestForAllConstructorsEmpty() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException {
 		final ConstructorParameters[] allConstructorParameters = getConstructorParameters();
 		for (final ConstructorParameters constructorParameters : allConstructorParameters) {
-			LOG.info("Testing properties for constructor with parameter types " + Arrays.toString(constructorParameters.getTypes()));
+			if (LOG.isInfoEnabled()) {
+				LOG.info("Testing properties for constructor with parameter types {}", Arrays.toString(constructorParameters.getTypes()));
+			}
 			final T bean = createInstance(constructorParameters);
 			Assert.assertNotNull(bean.toString());
 		}
@@ -843,7 +887,9 @@ public class BeanTestBase<T> {
 	public void toStringTestForAllConstructorsFilled() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException {
 		final ConstructorParameters[] allConstructorParameters = getConstructorParameters();
 		for (final ConstructorParameters constructorParameters : allConstructorParameters) {
-			LOG.info("Testing properties for constructor with parameter types " + Arrays.toString(constructorParameters.getTypes()));
+			if (LOG.isInfoEnabled()) {
+				LOG.info("Testing properties for constructor with parameter types {}", Arrays.toString(constructorParameters.getTypes()));
+			}
 			final T bean = createInstance(constructorParameters);
 			final String[] constructorPropertyNames = constructorParameters.getPropertyNames();
 			fillBean(bean, constructorPropertyNames);
@@ -859,7 +905,9 @@ public class BeanTestBase<T> {
 		if (declaresEquals()) {
 			final ConstructorParameters[] allConstructorParameters = getConstructorParameters();
 			for (final ConstructorParameters constructorParameters : allConstructorParameters) {
-				LOG.info("Testing equals (identity) for constructor with parameter types " + Arrays.toString(constructorParameters.getTypes()));
+				if (LOG.isInfoEnabled()) {
+					LOG.info("Testing equals (identity) for constructor with parameter types {}", Arrays.toString(constructorParameters.getTypes()));
+				}
 				final T bean = createInstance(constructorParameters);
 				final String[] constructorPropertyNames = constructorParameters.getPropertyNames();
 				fillBean(bean, constructorPropertyNames);
@@ -880,7 +928,9 @@ public class BeanTestBase<T> {
 		if (declaresEquals()) {
 			final ConstructorParameters[] allConstructorParameters = getConstructorParameters();
 			for (final ConstructorParameters constructorParameters : allConstructorParameters) {
-				LOG.info("Testing equals (equality) for constructor with parameter types " + Arrays.toString(constructorParameters.getTypes()));
+				if (LOG.isInfoEnabled()) {
+					LOG.info("Testing equals (equality) for constructor with parameter types {}", Arrays.toString(constructorParameters.getTypes()));
+				}
 				final String[] constructorPropertyNames = constructorParameters.getPropertyNames();
 				final T bean1 = createInstance(constructorParameters);
 				final Map<String, Object> values = fillBean(bean1, constructorPropertyNames);
@@ -891,7 +941,7 @@ public class BeanTestBase<T> {
 				Assert.assertEquals("Beans with same property values are not equal", bean1, bean2);
 			}
 		} else {
-			LOG.info(String.format("Skipping equals (values) test as '%s' does not implement equals.", beanClass.getName()));
+			LOG.info("Skipping equals (values) test as '{}' does not implement equals.", beanClass.getName());
 			// ignore this test
 			RuntimeIgnore.ignore();
 		}
@@ -905,7 +955,9 @@ public class BeanTestBase<T> {
 		if (declaresHashCode()) {
 			final ConstructorParameters[] allConstructorParameters = getConstructorParameters();
 			for (final ConstructorParameters constructorParameters : allConstructorParameters) {
-				LOG.info("Testing hashCode for constructor with parameter types " + Arrays.toString(constructorParameters.getTypes()));
+				if (LOG.isInfoEnabled()) {
+					LOG.info("Testing hashCode for constructor with parameter types {}", Arrays.toString(constructorParameters.getTypes()));
+				}
 				final String[] constructorPropertyNames = constructorParameters.getPropertyNames();
 				final T bean1 = createInstance(constructorParameters);
 				final Map<String, Object> values = fillBean(bean1, constructorPropertyNames);
@@ -916,7 +968,7 @@ public class BeanTestBase<T> {
 				Assert.assertEquals("Beans with same property values do not have same hashCode", bean1.hashCode(), bean2.hashCode());
 			}
 		} else {
-			LOG.info("Skipping hashCode test as " + beanClass + " does not implement hashCode.");
+			LOG.info("Skipping hashCode test as {} does not implement hashCode.", beanClass);
 			// ignore this test
 			RuntimeIgnore.ignore();
 		}
