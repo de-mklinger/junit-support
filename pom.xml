@@ -10,7 +10,7 @@
 
 	<groupId>de.mklinger.commons</groupId>
 	<artifactId>junit-support</artifactId>
-	<version>0.10-SNAPSHOT</version>
+	<version>0.10</version>
 
 	<name>${project.artifactId}</name>
 	<description>Helpers and base test classes for junit</description>
@@ -36,7 +36,7 @@
 	<scm>
 		<connection>scm:git:git@github.com:de-mklinger/junit-support.git</connection>
 		<developerConnection>scm:git:git@github.com:de-mklinger/junit-support.git</developerConnection>
-		<tag>HEAD</tag>
+		<tag>junit-support-0.10</tag>
 		<url>https://github.com/de-mklinger/junit-support</url>
 	</scm>
 
