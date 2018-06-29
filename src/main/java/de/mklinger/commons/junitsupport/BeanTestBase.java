@@ -156,10 +156,6 @@ public class BeanTestBase<T> {
 		this(DEFAULT_TEST_RUNS, treatIgnoreAsSuccess);
 	}
 
-	/**
-	 * Create a new BeanTestBase instance.
-	 * @param beanClass The bean class to test
-	 */
 	public BeanTestBase(final int testRuns, final boolean treatIgnoreAsSuccess) {
 		Type type = getClass().getGenericSuperclass();
 		while (!(type instanceof ParameterizedType) || ((ParameterizedType) type).getRawType() != BeanTestBase.class) {
