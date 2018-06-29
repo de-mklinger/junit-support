@@ -40,6 +40,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.internal.AssumptionViolatedException;
 import org.junit.internal.ExactComparisonCriteria;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,11 +63,13 @@ public class BeanTestBase<T> {
 	private static final int CREATED_ARRAY_MIN_LENGTH = 3;
 	private static final int CREATED_ARRAY_MAX_LENGTH = 10;
 	private static final int DEFAULT_TEST_RUNS = 20;
+	private static final boolean DEFAULT_TREAT_IGNORE_AS_SUCCESS = true;
 
 	private final Class<T> beanClass;
 	private final Random random;
+	private final boolean treatIgnoreAsSuccess;
+	private final int testRuns;
 	private Map<Class<?>[], Object[]> allConstructorPropertyValues;
-	private int testRuns;
 
 	/**
 	 * Constructor parameter descriptor.
@@ -111,17 +114,68 @@ public class BeanTestBase<T> {
 	 * @param beanClass The bean class to test
 	 */
 	public BeanTestBase(final Class<T> beanClass) {
-		this(beanClass, DEFAULT_TEST_RUNS);
+		this(beanClass, DEFAULT_TREAT_IGNORE_AS_SUCCESS);
 	}
 
 	/**
 	 * Create a new BeanTestBase instance.
 	 * @param beanClass The bean class to test
 	 */
-	public BeanTestBase(final Class<T> beanClass, int testRuns) {
+	public BeanTestBase(final Class<T> beanClass, final boolean treatIgnoreAsSuccess) {
+		this(beanClass, DEFAULT_TEST_RUNS, treatIgnoreAsSuccess);
+	}
+
+	/**
+	 * Create a new BeanTestBase instance.
+	 * @param beanClass The bean class to test
+	 */
+	public BeanTestBase(final Class<T> beanClass, final int testRuns) {
+		this(beanClass, testRuns, DEFAULT_TREAT_IGNORE_AS_SUCCESS);
+	}
+
+	/**
+	 * Create a new BeanTestBase instance.
+	 * @param beanClass The bean class to test
+	 */
+	public BeanTestBase(final Class<T> beanClass, final int testRuns, final boolean treatIgnoreAsSuccess) {
 		this.beanClass = beanClass;
 		this.random = new Random(getSeed());
 		this.testRuns = testRuns;
+		this.treatIgnoreAsSuccess = treatIgnoreAsSuccess;
+	}
+
+	public BeanTestBase() {
+		this(DEFAULT_TEST_RUNS, DEFAULT_TREAT_IGNORE_AS_SUCCESS);
+	}
+
+	public BeanTestBase(final int testRuns) {
+		this(testRuns, DEFAULT_TREAT_IGNORE_AS_SUCCESS);
+	}
+
+	public BeanTestBase(final boolean treatIgnoreAsSuccess) {
+		this(DEFAULT_TEST_RUNS, treatIgnoreAsSuccess);
+	}
+
+	/**
+	 * Create a new BeanTestBase instance.
+	 * @param beanClass The bean class to test
+	 */
+	public BeanTestBase(final int testRuns, final boolean treatIgnoreAsSuccess) {
+		Type type = getClass().getGenericSuperclass();
+		while (!(type instanceof ParameterizedType) || ((ParameterizedType) type).getRawType() != BeanTestBase.class) {
+			if (type instanceof ParameterizedType) {
+				type = ((Class<?>) ((ParameterizedType) type).getRawType()).getGenericSuperclass();
+			} else {
+				type = ((Class<?>) type).getGenericSuperclass();
+			}
+		}
+		@SuppressWarnings("unchecked")
+		Class<T> typeArgument = (Class<T>) ((ParameterizedType) type).getActualTypeArguments()[0];
+
+		this.beanClass = typeArgument;
+		this.random = new Random(getSeed());
+		this.testRuns = testRuns;
+		this.treatIgnoreAsSuccess = treatIgnoreAsSuccess;
 	}
 
 	private final long getSeed() {
@@ -351,7 +405,7 @@ public class BeanTestBase<T> {
 		return n;
 	}
 
-	private int createUnsignedInt(int max) {
+	private int createUnsignedInt(final int max) {
 		assert max >= 0;
 		int n = createUnsignedInt() % (max + 1);
 		assert n >= 0;
@@ -359,7 +413,7 @@ public class BeanTestBase<T> {
 		return n;
 	}
 
-	private int createUnsignedInt(int min, int max) {
+	private int createUnsignedInt(final int min, final int max) {
 		assert min >= 0;
 		assert max >= 0;
 		assert min <= max;
@@ -668,8 +722,14 @@ public class BeanTestBase<T> {
 	 */
 	@Test
 	public void propertyTestForAllConstructors() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException {
-		for (int i = 0; i < testRuns; i++) {
-			propertyTestForAllConstructorsImpl();
+		try {
+			for (int i = 0; i < testRuns; i++) {
+				propertyTestForAllConstructorsImpl();
+			}
+		} catch (AssumptionViolatedException e) {
+			if (!treatIgnoreAsSuccess) {
+				throw e;
+			}
 		}
 	}
 
@@ -713,8 +773,14 @@ public class BeanTestBase<T> {
 	 */
 	@Test
 	public void copyConstructorEqualsTest() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException {
-		for (int i = 0; i < testRuns; i++) {
-			copyConstructorEqualsTestImpl();
+		try {
+			for (int i = 0; i < testRuns; i++) {
+				copyConstructorEqualsTestImpl();
+			}
+		} catch (AssumptionViolatedException e) {
+			if (!treatIgnoreAsSuccess) {
+				throw e;
+			}
 		}
 	}
 
@@ -750,8 +816,14 @@ public class BeanTestBase<T> {
 	 */
 	@Test
 	public void copyConstructorValuesTest() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException {
-		for (int i = 0; i < testRuns; i++) {
-			copyConstructorValuesTestImpl();
+		try {
+			for (int i = 0; i < testRuns; i++) {
+				copyConstructorValuesTestImpl();
+			}
+		} catch (AssumptionViolatedException e) {
+			if (!treatIgnoreAsSuccess) {
+				throw e;
+			}
 		}
 	}
 
@@ -804,8 +876,14 @@ public class BeanTestBase<T> {
 	 */
 	@Test
 	public void copyConstructorEmptyEqualsTest() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException {
-		for (int i = 0; i < testRuns; i++) {
-			copyConstructorEmptyEqualsTestImpl();
+		try {
+			for (int i = 0; i < testRuns; i++) {
+				copyConstructorEmptyEqualsTestImpl();
+			}
+		} catch (AssumptionViolatedException e) {
+			if (!treatIgnoreAsSuccess) {
+				throw e;
+			}
 		}
 	}
 
@@ -839,8 +917,14 @@ public class BeanTestBase<T> {
 	 */
 	@Test
 	public void copyConstructorEmptyValuesTest() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException {
-		for (int i = 0; i < testRuns; i++) {
-			copyConstructorEmptyValuesTestImpl();
+		try {
+			for (int i = 0; i < testRuns; i++) {
+				copyConstructorEmptyValuesTestImpl();
+			}
+		} catch (AssumptionViolatedException e) {
+			if (!treatIgnoreAsSuccess) {
+				throw e;
+			}
 		}
 	}
 
@@ -911,8 +995,14 @@ public class BeanTestBase<T> {
 	 */
 	@Test
 	public void toStringTestForAllConstructorsEmpty() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException {
-		for (int i = 0; i < testRuns; i++) {
-			toStringTestForAllConstructorsEmptyImpl();
+		try {
+			for (int i = 0; i < testRuns; i++) {
+				toStringTestForAllConstructorsEmptyImpl();
+			}
+		} catch (AssumptionViolatedException e) {
+			if (!treatIgnoreAsSuccess) {
+				throw e;
+			}
 		}
 	}
 
@@ -933,8 +1023,14 @@ public class BeanTestBase<T> {
 	 */
 	@Test
 	public void toStringTestForAllConstructorsFilled() throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException {
-		for (int i = 0; i < testRuns; i++) {
-			toStringTestForAllConstructorsFilledImpl();
+		try {
+			for (int i = 0; i < testRuns; i++) {
+				toStringTestForAllConstructorsFilledImpl();
+			}
+		} catch (AssumptionViolatedException e) {
+			if (!treatIgnoreAsSuccess) {
+				throw e;
+			}
 		}
 	}
 
@@ -957,8 +1053,14 @@ public class BeanTestBase<T> {
 	 */
 	@Test
 	public void equalsIdentityTest() throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException, NoSuchMethodException {
-		for (int i = 0; i < testRuns; i++) {
-			equalsIdentityTestImpl();
+		try {
+			for (int i = 0; i < testRuns; i++) {
+				equalsIdentityTestImpl();
+			}
+		} catch (AssumptionViolatedException e) {
+			if (!treatIgnoreAsSuccess) {
+				throw e;
+			}
 		}
 	}
 
@@ -986,10 +1088,15 @@ public class BeanTestBase<T> {
 	 */
 	@Test
 	public void equalsValuesTest() throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException, NoSuchMethodException {
-		for (int i = 0; i < testRuns; i++) {
-			equalsValuesTestImpl();
+		try {
+			for (int i = 0; i < testRuns; i++) {
+				equalsValuesTestImpl();
+			}
+		} catch (AssumptionViolatedException e) {
+			if (!treatIgnoreAsSuccess) {
+				throw e;
+			}
 		}
-
 	}
 
 	protected void equalsValuesTestImpl() throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException, NoSuchMethodException {
@@ -1020,8 +1127,14 @@ public class BeanTestBase<T> {
 	 */
 	@Test
 	public void hashCodeTest() throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchFieldException, NoSuchMethodException {
-		for (int i = 0; i < testRuns; i++) {
-			hashCodeTestImpl();
+		try {
+			for (int i = 0; i < testRuns; i++) {
+				hashCodeTestImpl();
+			}
+		} catch (AssumptionViolatedException e) {
+			if (!treatIgnoreAsSuccess) {
+				throw e;
+			}
 		}
 	}
 

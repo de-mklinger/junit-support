@@ -16,6 +16,8 @@
 package de.mklinger.commons.junitsupport;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -30,6 +32,21 @@ import org.junit.Test;
 public class ExceptionTestBase<T extends Throwable> {
 	private static final String THE_MESSAGE = "The message";
 	private final Class<T> exceptionClass;
+
+	public ExceptionTestBase() {
+		Type type = getClass().getGenericSuperclass();
+		while (!(type instanceof ParameterizedType) || ((ParameterizedType) type).getRawType() != BeanTestBase.class) {
+			if (type instanceof ParameterizedType) {
+				type = ((Class<?>) ((ParameterizedType) type).getRawType()).getGenericSuperclass();
+			} else {
+				type = ((Class<?>) type).getGenericSuperclass();
+			}
+		}
+		@SuppressWarnings("unchecked")
+		Class<T> typeArgument = (Class<T>) ((ParameterizedType) type).getActualTypeArguments()[0];
+
+		this.exceptionClass = typeArgument;
+	}
 
 	/**
 	 * Create a new ExceptionTestBase instance.

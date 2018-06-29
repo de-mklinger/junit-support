@@ -10,8 +10,8 @@ What is it?
 Junit-Support provides base classes for JUnit tests to cover common tests.
 
 - Test bean classes: Do all setters correspond to their getters? Do copy
-  constructors cover all bean properties? Are ```equals()``` and
-  ```hashCode()``` implemented correctly?
+  constructors cover all bean properties? Are `equals()` and
+  `hashCode()` implemented correctly?
 - Test delegate classes: Do methods expected to call the delegate actually
   call the delegate?
 - Test exception classes: Do the standard exception constructors exist and
@@ -27,17 +27,14 @@ Maven dependency:
 <dependency>
     <groupId>de.mklinger.commons</groupId>
     <artifactId>junit-support</artifactId>
-    <version>0.9</version>
+    <version>0.10</version>
 </dependency>
 ```
 
-For a given bean class ```MyBean``` a basic test looks like this:
+For a given bean class `MyBean` a basic test looks like this:
 
 ```java
 public class MyBeanTest extends BeanTestBase<MyBean> {
-    public MyBeanTest() {
-        super(MyBean.class);
-    }
 }
 ```
 
