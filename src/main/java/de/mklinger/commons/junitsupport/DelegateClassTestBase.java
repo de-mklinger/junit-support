@@ -18,7 +18,9 @@ package de.mklinger.commons.junitsupport;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -40,6 +42,33 @@ public class DelegateClassTestBase {
 		this.delegateType = delegateType;
 		this.classUnderTest = classUnderTest;
 		this.testMethods = testMethods;
+	}
+
+	public static TestMethod[] declaredTestMethodsFor(final Class<?> type) {
+		final BeanTestBase<Void> beanTestBase = new BeanTestBase<Void>(Void.class) {};
+
+		final Method[] methods = type.getDeclaredMethods();
+		final List<TestMethod> testMethods = new ArrayList<>(methods.length);
+
+		for (final Method method : methods) {
+
+			if ("$jacocoInit".equals(method.getName())) {
+				continue;
+			}
+
+			final List<Object> parameters = new ArrayList<>();
+			for (final Class<?> parameterType : method.getParameterTypes()) {
+				parameters.add(beanTestBase.createValue(parameterType));
+			}
+
+			testMethods.add(new TestMethod(
+					method.getName(),
+					method.getReturnType(),
+					method.getParameterTypes(),
+					parameters.toArray(new Object[0])));
+		}
+
+		return testMethods.toArray(new TestMethod[0]);
 	}
 
 	/** A test method to be delegated. */
@@ -64,29 +93,38 @@ public class DelegateClassTestBase {
 	}
 
 	private void testDelegateMethod(final TestMethod testMethod) throws Exception {
+		final boolean haveReturn = testMethod.returnType != null && testMethod.returnType != Void.TYPE;
+
 		Object returnValue = null;
-		if (testMethod.returnType != null) {
-			returnValue = EasyMock.createStrictMock(testMethod.returnType);
+		if (haveReturn) {
+			try {
+				returnValue = EasyMock.createStrictMock(testMethod.returnType);
+			} catch (final IllegalArgumentException e) {
+				final BeanTestBase<Void> beanTestBase = new BeanTestBase<Void>(Void.class) {};
+				returnValue = beanTestBase.createValue(testMethod.returnType);
+			}
 		}
+
 		final Object delegate = EasyMock.createStrictMock(delegateType);
 		final Method method = delegate.getClass().getMethod(testMethod.name, testMethod.parameterTypes);
 		method.invoke(delegate, testMethod.parameters);
-		if (testMethod.returnType != null) {
+
+		if (haveReturn) {
 			EasyMock.expectLastCall().andReturn(returnValue);
 		} else {
-			EasyMock.expectLastCall();
+			EasyMock.expectLastCall().andVoid();
 		}
-		if (testMethod.returnType != null) {
-			EasyMock.replay(returnValue);
-		}
+
 		EasyMock.replay(delegate);
+
 		final Object instanceUnderTest = createInstanceUnderTest(delegate);
 		final Method delegateMethod = instanceUnderTest.getClass().getMethod(testMethod.name, testMethod.parameterTypes);
 		final Object actualReturnValue = delegateMethod.invoke(instanceUnderTest, testMethod.parameters);
-		if (testMethod.returnType != null) {
+
+		if (haveReturn) {
 			Assert.assertEquals(returnValue, actualReturnValue);
-			EasyMock.verify(returnValue);
 		}
+
 		EasyMock.verify(delegate);
 	}
 
@@ -104,9 +142,7 @@ public class DelegateClassTestBase {
 				testDelegateMethod(testMethod);
 			} catch (final Exception e) {
 				final String msg = "Error testing delegate method " + testMethod.name + "(" + Arrays.toString(testMethod.parameterTypes) + "): " + e.toString();
-				System.err.println(msg);
-				e.printStackTrace();
-				Assert.fail(msg);
+				throw new AssertionError(msg, e);
 			}
 		}
 	}
