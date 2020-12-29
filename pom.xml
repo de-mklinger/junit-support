@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>de.mklinger.maven</groupId>
 		<artifactId>maven-parent</artifactId>
-		<version>1.8</version>
+		<version>1.21</version>
 	</parent>
 
 	<groupId>de.mklinger.commons</groupId>
@@ -46,10 +46,6 @@
 			<artifactId>slf4j-api</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>commons-io</groupId>
-			<artifactId>commons-io</artifactId>
-		</dependency>
-		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<scope>compile</scope>
@@ -69,13 +65,6 @@
 	<build>
 		<pluginManagement>
 			<plugins>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-javadoc-plugin</artifactId>
-					<configuration>
-						<additionalparam>-Xdoclint:none</additionalparam>
-					</configuration>
-				</plugin>
 				<!-- | Use 'mvn license:format -N' at top of project to add missing headers -->
 				<plugin>
 					<groupId>com.mycila</groupId>
