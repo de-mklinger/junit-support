@@ -15,7 +15,6 @@
  */
 package de.mklinger.commons.junitsupport;
 
-import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -23,19 +22,15 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -51,22 +46,18 @@ import org.slf4j.LoggerFactory;
  * @author Marc Klinger - mklinger[at]mklinger[dot]de
  */
 @Ignore("Not a test")
-public class BeanTestBase<T> {
+public class BeanTestBase<T> extends TestValueFactory {
 	/** Default constructor parameters. */
 	protected static final ConstructorParameters DEFAULT_CONSTRUCTOR_PARAMETERS = new ConstructorParameters(new Class<?>[0], new String[0]);
 
 	private static final Logger LOG = LoggerFactory.getLogger(BeanTestBase.class);
 
 	private static final String SETTER_PREFIX = "set";
-	private static final int TIME_MULT = 100000;
 	private static final float DELTA = 0.0000000000001f;
-	private static final int CREATED_ARRAY_MIN_LENGTH = 3;
-	private static final int CREATED_ARRAY_MAX_LENGTH = 10;
 	private static final int DEFAULT_TEST_RUNS = 20;
 	private static final boolean DEFAULT_TREAT_IGNORE_AS_SUCCESS = true;
 
 	private final Class<T> beanClass;
-	private final Random random;
 	private final boolean treatIgnoreAsSuccess;
 	private final int testRuns;
 	private Map<Class<?>[], Object[]> allConstructorPropertyValues;
@@ -139,7 +130,6 @@ public class BeanTestBase<T> {
 	 */
 	public BeanTestBase(final Class<T> beanClass, final int testRuns, final boolean treatIgnoreAsSuccess) {
 		this.beanClass = beanClass;
-		this.random = new Random(getSeed());
 		this.testRuns = testRuns;
 		this.treatIgnoreAsSuccess = treatIgnoreAsSuccess;
 	}
@@ -166,66 +156,11 @@ public class BeanTestBase<T> {
 			}
 		}
 		@SuppressWarnings("unchecked")
-		Class<T> typeArgument = (Class<T>) ((ParameterizedType) type).getActualTypeArguments()[0];
+		final Class<T> typeArgument = (Class<T>) ((ParameterizedType) type).getActualTypeArguments()[0];
 
 		this.beanClass = typeArgument;
-		this.random = new Random(getSeed());
 		this.testRuns = testRuns;
 		this.treatIgnoreAsSuccess = treatIgnoreAsSuccess;
-	}
-
-	private final long getSeed() {
-		String propertyName = getClass().getName() + ".seed";
-		String s = System.getProperty(propertyName);
-		long value;
-		if (s != null && !s.isEmpty()) {
-			value = Long.parseLong(s);
-		} else {
-			value = new SecureRandom().nextLong();
-		}
-		LOG.info("Set system property {}={} to reproduce test values", propertyName, value);
-		return value;
-	}
-
-	private static void addAllFields(final Class<?> clazz, final List<Field> allFields) {
-		allFields.addAll(Arrays.asList(clazz.getDeclaredFields()));
-		final Class<?> superclass = clazz.getSuperclass();
-		if (superclass != Object.class) {
-			addAllFields(superclass, allFields);
-		}
-	}
-
-	/**
-	 * Get all fields for the bean class. This also includes fields from parent classes whether or not they are visible.
-	 * @return All fields
-	 */
-	private Field[] getAllFields() {
-		final List<Field> allFields = new ArrayList<>();
-		addAllFields(beanClass, allFields);
-		return allFields.toArray(new Field[allFields.size()]);
-	}
-
-	private static void addAllSetters(final Class<?> clazz, final List<Method> allSetters) {
-		final Method[] methods = clazz.getDeclaredMethods();
-		for (final Method method : methods) {
-			if (method.getName().startsWith(SETTER_PREFIX) && method.getParameterTypes().length == 1) {
-				allSetters.add(method);
-			}
-		}
-		final Class<?> superclass = clazz.getSuperclass();
-		if (superclass != Object.class) {
-			addAllSetters(superclass, allSetters);
-		}
-	}
-
-	/**
-	 * Get all setter methods for the bean class. This also includes setters from parent classes whether or not they are visible.
-	 * @return All setters
-	 */
-	private Method[] getAllSetters() {
-		final List<Method> allSetters = new ArrayList<>();
-		addAllSetters(beanClass, allSetters);
-		return allSetters.toArray(new Method[allSetters.size()]);
 	}
 
 	/**
@@ -258,180 +193,43 @@ public class BeanTestBase<T> {
 	}
 
 	/**
-	 * Get all existing fields for properties of the bean.
-	 * @return The fields
+	 * Get all fields for the bean class. This also includes fields from parent classes whether or not they are visible.
+	 * @return All fields
 	 */
-	protected Collection<Field> getBeanFields() {
-		final Collection<String> beanPropertyNames = getBeanPropertyNames();
-		final Collection<Field> beanFields = new ArrayList<>(beanPropertyNames.size());
-		for (final String propertyName : beanPropertyNames) {
-			Field field;
-			try {
-				field = getDeclaredField(propertyName);
-				field.setAccessible(true);
-				beanFields.add(field);
-			} catch (final NoSuchFieldException e) {
-				// ignore
-				LOG.debug("getBeanFields()", e);
-			}
+	private Field[] getAllFields() {
+		final List<Field> allFields = new ArrayList<>();
+		addAllFields(beanClass, allFields);
+		return allFields.toArray(new Field[allFields.size()]);
+	}
+
+	private static void addAllFields(final Class<?> clazz, final List<Field> allFields) {
+		allFields.addAll(Arrays.asList(clazz.getDeclaredFields()));
+		final Class<?> superclass = clazz.getSuperclass();
+		if (superclass != Object.class) {
+			addAllFields(superclass, allFields);
 		}
-		return beanFields;
-	}
-
-	private Field getDeclaredField(final String propertyName) throws NoSuchFieldException {
-		return getDeclaredFieldRecursive(beanClass, propertyName);
-	}
-
-	private Field getDeclaredFieldRecursive(final Class<?> startClass, final String propertyName) throws NoSuchFieldException {
-		try {
-			return startClass.getDeclaredField(propertyName);
-		} catch (final NoSuchFieldException e) {
-			final Class<?> superclass = startClass.getSuperclass();
-			if (superclass != Object.class) {
-				return getDeclaredFieldRecursive(superclass, propertyName);
-			} else {
-				throw new NoSuchFieldException("No field found for property " + propertyName);
-			}
-		}
-	}
-
-	/** Get the next test value. */
-	protected long getNextTestValue() {
-		return random.nextLong();
 	}
 
 	/**
-	 * Create a test value for the given type.
-	 * @param type The type
-	 * @return The test value
+	 * Get all setter methods for the bean class. This also includes setters from parent classes whether or not they are visible.
+	 * @return All setters
 	 */
-	protected Object createValue(final Type type) {
-		Class<?> clazz = null;
-		ParameterizedType parameterizedType = null;
-		if (type instanceof Class<?>) {
-			clazz = (Class<?>) type;
-		} else if (type instanceof ParameterizedType) {
-			parameterizedType = (ParameterizedType) type;
-			final Type rawType = parameterizedType.getRawType();
-			if (rawType instanceof Class<?>) {
-				clazz = (Class<?>) rawType;
+	private Method[] getAllSetters() {
+		final List<Method> allSetters = new ArrayList<>();
+		addAllSetters(beanClass, allSetters);
+		return allSetters.toArray(new Method[allSetters.size()]);
+	}
+
+	private static void addAllSetters(final Class<?> clazz, final List<Method> allSetters) {
+		final Method[] methods = clazz.getDeclaredMethods();
+		for (final Method method : methods) {
+			if (method.getName().startsWith(SETTER_PREFIX) && method.getParameterTypes().length == 1) {
+				allSetters.add(method);
 			}
 		}
-		if (clazz != null && clazz.isArray()) {
-			int len = createArrayLength();
-			final Object array = Array.newInstance(clazz.getComponentType(), len);
-			for (int i = 0; i < len; i++) {
-				Array.set(array, i, createValue(clazz.getComponentType()));
-			}
-			return array;
-		} else if (clazz != null && clazz.isEnum()) {
-			try {
-				final Method valuesMethod = clazz.getMethod("values", new Class<?>[0]);
-				final Object[] values = (Object[]) valuesMethod.invoke(null, new Object[0]);
-				final int n = createUnsignedInt();
-				return values[n % values.length];
-			} catch (final Exception e) {
-				// ignore
-				LOG.debug("Error getting enum value", e);
-			}
-		} else if (parameterizedType != null && parameterizedType.getRawType() == Map.class) {
-			final Map<Object, Object> result = new HashMap<>();
-			final Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
-			if (actualTypeArguments.length != 2) {
-				throw new IllegalStateException("Have map with actualTypeArguments.length != 2");
-			}
-			int len = createArrayLength();
-			for (int i = 0; i < len; i++) {
-				result.put(createValue(actualTypeArguments[0]), createValue(actualTypeArguments[1]));
-			}
-			return Collections.unmodifiableMap(result);
-		} else if (parameterizedType != null && parameterizedType.getRawType() == List.class) {
-			final List<Object> result = new ArrayList<>();
-			addValuesToCollection(result, parameterizedType);
-			return Collections.unmodifiableList(result);
-		} else if (parameterizedType != null && parameterizedType.getRawType() == Set.class) {
-			final Set<Object> result = new HashSet<>();
-			addValuesToCollection(result, parameterizedType);
-			return Collections.unmodifiableSet(result);
-		} else if (parameterizedType != null && parameterizedType.getRawType() == Collection.class) {
-			final Collection<Object> result = new HashSet<>();
-			addValuesToCollection(result, parameterizedType);
-			return Collections.unmodifiableCollection(result);
-		} else if (parameterizedType != null && parameterizedType.getRawType() == AtomicReference.class) {
-			final AtomicReference<Object> result = new AtomicReference<>();
-			final Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
-			if (actualTypeArguments.length != 1) {
-				throw new IllegalStateException("Have parameterizedType with actualTypeArguments.length != 1");
-			}
-			result.set(createValue(actualTypeArguments[0]));
-			return result;
-		} else if (type == Long.TYPE || type == Long.class) {
-			return getNextTestValue();
-		} else if (type == Integer.TYPE || type == Integer.class) {
-			return (int) getNextTestValue();
-		} else if (type == Character.TYPE || type == Character.class) {
-			return (char) getNextTestValue();
-		} else if (type == Short.TYPE || type == Short.class) {
-			return (short) getNextTestValue();
-		} else if (type == Byte.TYPE || type == Byte.class) {
-			return (byte) getNextTestValue();
-		} else if (type == Float.TYPE || type == Float.class) {
-			return (float) getNextTestValue();
-		} else if (type == Double.TYPE || type == Double.class) {
-			return (double) getNextTestValue();
-		} else if (type == Boolean.TYPE || type == Boolean.class) {
-			return (getNextTestValue() % 2) == 0;
-		} else if (type == String.class) {
-			return Long.toHexString(getNextTestValue());
-		} else if (type == Date.class) {
-			return new Date(System.currentTimeMillis() - getNextTestValue() * TIME_MULT);
-		} else if (type == Object.class) {
-			return createValue(String.class);
-		}
-		throw new UnsupportedOperationException("Test " + getClass() + " must override createValue(Type type) and return a value for type " + type);
-	}
-
-	private int createUnsignedInt() {
-		int n;
-		do {
-			n = (int) createValue(Integer.TYPE);
-		} while (n == Integer.MAX_VALUE);
-		n = Math.abs(n);
-		assert n >= 0;
-		return n;
-	}
-
-	private int createUnsignedInt(final int max) {
-		assert max >= 0;
-		int n = createUnsignedInt() % (max + 1);
-		assert n >= 0;
-		assert n <= max;
-		return n;
-	}
-
-	private int createUnsignedInt(final int min, final int max) {
-		assert min >= 0;
-		assert max >= 0;
-		assert min <= max;
-		int n = createUnsignedInt(max - min) + min;
-		assert n >= 0;
-		assert n >= min;
-		assert n <= max;
-		return n;
-	}
-
-	private int createArrayLength() {
-		return createUnsignedInt(CREATED_ARRAY_MIN_LENGTH, CREATED_ARRAY_MAX_LENGTH);
-	}
-
-	private void addValuesToCollection(final Collection<Object> result, final ParameterizedType parameterizedType) {
-		final Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
-		if (actualTypeArguments.length != 1) {
-			throw new IllegalStateException("Have collection with actualTypeArguments.length != 1");
-		}
-		int len = createArrayLength();
-		for (int i = 0; i < len; i++) {
-			result.add(createValue(actualTypeArguments[0]));
+		final Class<?> superclass = clazz.getSuperclass();
+		if (superclass != Object.class) {
+			addAllSetters(superclass, allSetters);
 		}
 	}
 
@@ -469,7 +267,7 @@ public class BeanTestBase<T> {
 		}
 		final String setterName = SETTER_PREFIX + upperName;
 		try {
-			return getMethod(beanClass, setterName, new Class<?>[] {propertyType});
+			return getMethod(beanClass, setterName, propertyType);
 		} catch (final NoSuchMethodException e) {
 			LOG.warn("No setter found for property: {}#{}", beanClass.getName(), propertyName);
 			return null;
@@ -485,11 +283,11 @@ public class BeanTestBase<T> {
 		}
 		String getterName = "get" + upperName;
 		try {
-			return getMethod(beanClass, getterName, new Class<?>[0]);
+			return getMethod(beanClass, getterName);
 		} catch (final NoSuchMethodException e) {
 			getterName = "is" + upperName;
 			try {
-				return getMethod(beanClass, getterName, new Class<?>[0]);
+				return getMethod(beanClass, getterName);
 			} catch (final NoSuchMethodException e2) {
 				LOG.warn("No getter found for property: {}#{}", beanClass.getName(), propertyName);
 				return null;
@@ -517,7 +315,7 @@ public class BeanTestBase<T> {
 		final Method getter = getGetter(propertyName);
 		if (getter != null) {
 			getter.setAccessible(true);
-			fieldValue = getter.invoke(entity, new Object[0]);
+			fieldValue = getter.invoke(entity);
 		} else {
 			final Field field = getDeclaredField(propertyName);
 			field.setAccessible(true);
@@ -680,6 +478,23 @@ public class BeanTestBase<T> {
 		}
 	}
 
+	private Field getDeclaredField(final String propertyName) throws NoSuchFieldException {
+		return getDeclaredFieldRecursive(beanClass, propertyName);
+	}
+
+	private Field getDeclaredFieldRecursive(final Class<?> startClass, final String propertyName) throws NoSuchFieldException {
+		try {
+			return startClass.getDeclaredField(propertyName);
+		} catch (final NoSuchFieldException e) {
+			final Class<?> superclass = startClass.getSuperclass();
+			if (superclass != Object.class) {
+				return getDeclaredFieldRecursive(superclass, propertyName);
+			} else {
+				throw new NoSuchFieldException("No field found for property " + propertyName);
+			}
+		}
+	}
+
 	private static Set<String> toSet(final String[] s) {
 		Set<String> set = null;
 		if (s != null && s.length > 0) {
@@ -710,7 +525,7 @@ public class BeanTestBase<T> {
 	}
 
 	private boolean declaresHashCode() throws NoSuchMethodException {
-		return beanClass.getMethod("hashCode", new Class<?>[0]).getDeclaringClass() != Object.class;
+		return beanClass.getMethod("hashCode").getDeclaringClass() != Object.class;
 	}
 
 	/**
@@ -722,7 +537,7 @@ public class BeanTestBase<T> {
 			for (int i = 0; i < testRuns; i++) {
 				propertyTestForAllConstructorsImpl();
 			}
-		} catch (AssumptionViolatedException e) {
+		} catch (final AssumptionViolatedException e) {
 			if (!treatIgnoreAsSuccess) {
 				throw e;
 			}
@@ -773,7 +588,7 @@ public class BeanTestBase<T> {
 			for (int i = 0; i < testRuns; i++) {
 				copyConstructorEqualsTestImpl();
 			}
-		} catch (AssumptionViolatedException e) {
+		} catch (final AssumptionViolatedException e) {
 			if (!treatIgnoreAsSuccess) {
 				throw e;
 			}
@@ -816,7 +631,7 @@ public class BeanTestBase<T> {
 			for (int i = 0; i < testRuns; i++) {
 				copyConstructorValuesTestImpl();
 			}
-		} catch (AssumptionViolatedException e) {
+		} catch (final AssumptionViolatedException e) {
 			if (!treatIgnoreAsSuccess) {
 				throw e;
 			}
@@ -876,7 +691,7 @@ public class BeanTestBase<T> {
 			for (int i = 0; i < testRuns; i++) {
 				copyConstructorEmptyEqualsTestImpl();
 			}
-		} catch (AssumptionViolatedException e) {
+		} catch (final AssumptionViolatedException e) {
 			if (!treatIgnoreAsSuccess) {
 				throw e;
 			}
@@ -917,7 +732,7 @@ public class BeanTestBase<T> {
 			for (int i = 0; i < testRuns; i++) {
 				copyConstructorEmptyValuesTestImpl();
 			}
-		} catch (AssumptionViolatedException e) {
+		} catch (final AssumptionViolatedException e) {
 			if (!treatIgnoreAsSuccess) {
 				throw e;
 			}
@@ -995,7 +810,7 @@ public class BeanTestBase<T> {
 			for (int i = 0; i < testRuns; i++) {
 				toStringTestForAllConstructorsEmptyImpl();
 			}
-		} catch (AssumptionViolatedException e) {
+		} catch (final AssumptionViolatedException e) {
 			if (!treatIgnoreAsSuccess) {
 				throw e;
 			}
@@ -1023,7 +838,7 @@ public class BeanTestBase<T> {
 			for (int i = 0; i < testRuns; i++) {
 				toStringTestForAllConstructorsFilledImpl();
 			}
-		} catch (AssumptionViolatedException e) {
+		} catch (final AssumptionViolatedException e) {
 			if (!treatIgnoreAsSuccess) {
 				throw e;
 			}
@@ -1053,7 +868,7 @@ public class BeanTestBase<T> {
 			for (int i = 0; i < testRuns; i++) {
 				equalsIdentityTestImpl();
 			}
-		} catch (AssumptionViolatedException e) {
+		} catch (final AssumptionViolatedException e) {
 			if (!treatIgnoreAsSuccess) {
 				throw e;
 			}
@@ -1088,7 +903,7 @@ public class BeanTestBase<T> {
 			for (int i = 0; i < testRuns; i++) {
 				equalsValuesTestImpl();
 			}
-		} catch (AssumptionViolatedException e) {
+		} catch (final AssumptionViolatedException e) {
 			if (!treatIgnoreAsSuccess) {
 				throw e;
 			}
@@ -1127,7 +942,7 @@ public class BeanTestBase<T> {
 			for (int i = 0; i < testRuns; i++) {
 				hashCodeTestImpl();
 			}
-		} catch (AssumptionViolatedException e) {
+		} catch (final AssumptionViolatedException e) {
 			if (!treatIgnoreAsSuccess) {
 				throw e;
 			}

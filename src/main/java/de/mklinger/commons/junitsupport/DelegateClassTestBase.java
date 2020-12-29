@@ -18,6 +18,7 @@ package de.mklinger.commons.junitsupport;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -32,43 +33,51 @@ import org.junit.Test;
  * @author Marc Klinger - mklinger[at]mklinger[dot]de
  */
 @Ignore("Not a test")
-public class DelegateClassTestBase {
+public class DelegateClassTestBase extends TestValueFactory {
 	private final Class<?> delegateType;
 	private final Class<?> classUnderTest;
 	private final TestMethod[] testMethods;
 
-	/** Create a new delegate class test base. */
+	/**
+	 * Create a new delegate class test base.
+	 *
+	 * @param delegateType   The delegation target type
+	 * @param classUnderTest The delegating class
+	 * @param testMethods    which methods to test. If not given, all non-private
+	 *                       declared instance methods of delegateType are used.
+	 */
 	public DelegateClassTestBase(final Class<?> delegateType, final Class<?> classUnderTest, final TestMethod... testMethods) {
 		this.delegateType = delegateType;
 		this.classUnderTest = classUnderTest;
-		this.testMethods = testMethods;
+		if (testMethods.length == 0) {
+			this.testMethods = declaredTestMethodsFor(delegateType);
+		} else {
+			this.testMethods = testMethods;
+		}
 	}
 
 	public static TestMethod[] declaredTestMethodsFor(final Class<?> type) {
-		final BeanTestBase<Void> beanTestBase = new BeanTestBase<Void>(Void.class) {};
-
 		final Method[] methods = type.getDeclaredMethods();
 		final List<TestMethod> testMethods = new ArrayList<>(methods.length);
 
 		for (final Method method : methods) {
-
-			if ("$jacocoInit".equals(method.getName())) {
-				continue;
+			if (isTestMethodCandidate(method)) {
+				testMethods.add(new TestMethod(
+						method.getName(),
+						method.getReturnType(),
+						method.getParameterTypes(),
+						null));
 			}
-
-			final List<Object> parameters = new ArrayList<>();
-			for (final Class<?> parameterType : method.getParameterTypes()) {
-				parameters.add(beanTestBase.createValue(parameterType));
-			}
-
-			testMethods.add(new TestMethod(
-					method.getName(),
-					method.getReturnType(),
-					method.getParameterTypes(),
-					parameters.toArray(new Object[0])));
 		}
 
 		return testMethods.toArray(new TestMethod[0]);
+	}
+
+	private static boolean isTestMethodCandidate(final Method method) {
+		final int modifiers = method.getModifiers();
+		return !Modifier.isStatic(modifiers)
+				&& !Modifier.isPrivate(modifiers)
+				&& !"$jacocoInit".equals(method.getName());
 	}
 
 	/** A test method to be delegated. */
@@ -93,21 +102,20 @@ public class DelegateClassTestBase {
 	}
 
 	private void testDelegateMethod(final TestMethod testMethod) throws Exception {
-		final boolean haveReturn = testMethod.returnType != null && testMethod.returnType != Void.TYPE;
+		final boolean haveReturn = testMethod.returnType != null
+				&& testMethod.returnType != Void.TYPE;
 
 		Object returnValue = null;
 		if (haveReturn) {
-			try {
-				returnValue = EasyMock.createStrictMock(testMethod.returnType);
-			} catch (final IllegalArgumentException e) {
-				final BeanTestBase<Void> beanTestBase = new BeanTestBase<Void>(Void.class) {};
-				returnValue = beanTestBase.createValue(testMethod.returnType);
-			}
+			returnValue = createValue(testMethod.returnType);
 		}
 
 		final Object delegate = EasyMock.createStrictMock(delegateType);
 		final Method method = delegate.getClass().getMethod(testMethod.name, testMethod.parameterTypes);
-		method.invoke(delegate, testMethod.parameters);
+
+		final Object[] actualParameters = getParameters(testMethod);
+
+		method.invoke(delegate, actualParameters);
 
 		if (haveReturn) {
 			EasyMock.expectLastCall().andReturn(returnValue);
@@ -119,13 +127,25 @@ public class DelegateClassTestBase {
 
 		final Object instanceUnderTest = createInstanceUnderTest(delegate);
 		final Method delegateMethod = instanceUnderTest.getClass().getMethod(testMethod.name, testMethod.parameterTypes);
-		final Object actualReturnValue = delegateMethod.invoke(instanceUnderTest, testMethod.parameters);
+		final Object actualReturnValue = delegateMethod.invoke(instanceUnderTest, actualParameters);
 
 		if (haveReturn) {
 			Assert.assertEquals(returnValue, actualReturnValue);
 		}
 
 		EasyMock.verify(delegate);
+	}
+
+	private Object[] getParameters(final TestMethod testMethod) {
+		if (testMethod.parameters != null) {
+			return testMethod.parameters;
+		} else {
+			final Object[] parameters = new Object[testMethod.parameterTypes.length];
+			for (int i = 0; i < testMethod.parameterTypes.length; i++) {
+				parameters[i] = createValue(testMethod.parameterTypes[i]);
+			}
+			return parameters;
+		}
 	}
 
 	private Object createInstanceUnderTest(final Object delegate) throws NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException {
