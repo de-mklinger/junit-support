@@ -15,7 +15,8 @@
  */
 package de.mklinger.commons.junitsupport;
 
-import org.junit.internal.AssumptionViolatedException;
+import static org.junit.Assume.assumeFalse;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * Runtime test ignore util class.
@@ -26,19 +27,15 @@ public class RuntimeIgnore {
 	}
 
 	public static void ignore() {
-		throw new AssumptionViolatedException("Test ignored");
+		assumeTrue("Test ignored", false);
 	}
 
 	public static void ignoreIf(final boolean shouldIgnore) {
-		if (shouldIgnore) {
-			throw new AssumptionViolatedException("Test ignored");
-		}
+		assumeFalse("Test ignored", shouldIgnore);
 	}
 
 	public static void ignoreIfNot(final boolean shouldNotIgnore) {
-		if (!shouldNotIgnore) {
-			throw new AssumptionViolatedException("Test ignored");
-		}
+		assumeTrue("Test ignored", shouldNotIgnore);
 	}
 }
 
