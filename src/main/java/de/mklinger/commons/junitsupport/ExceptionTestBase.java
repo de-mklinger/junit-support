@@ -35,7 +35,7 @@ public class ExceptionTestBase<T extends Throwable> {
 
 	public ExceptionTestBase() {
 		Type type = getClass().getGenericSuperclass();
-		while (!(type instanceof ParameterizedType) || ((ParameterizedType) type).getRawType() != BeanTestBase.class) {
+		while (!(type instanceof ParameterizedType) || ((ParameterizedType) type).getRawType() != ExceptionTestBase.class) {
 			if (type instanceof ParameterizedType) {
 				type = ((Class<?>) ((ParameterizedType) type).getRawType()).getGenericSuperclass();
 			} else {
@@ -43,7 +43,7 @@ public class ExceptionTestBase<T extends Throwable> {
 			}
 		}
 		@SuppressWarnings("unchecked")
-		Class<T> typeArgument = (Class<T>) ((ParameterizedType) type).getActualTypeArguments()[0];
+		final Class<T> typeArgument = (Class<T>) ((ParameterizedType) type).getActualTypeArguments()[0];
 
 		this.exceptionClass = typeArgument;
 	}
@@ -61,19 +61,27 @@ public class ExceptionTestBase<T extends Throwable> {
 	 */
 	@Test
 	public void testConstructor1() throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException {
-		final T exce = exceptionClass.getConstructor(new Class[0]).newInstance(new Object[0]);
-		Assert.assertNull(exce.getMessage());
-		Assert.assertNull(exce.getCause());
+		try {
+			final T exce = exceptionClass.getConstructor().newInstance();
+			Assert.assertNull(exce.getMessage());
+			Assert.assertNull(exce.getCause());
+		} catch (final NoSuchMethodException e) {
+			// ignore
+		}
 	}
 
 	/**
 	 * Tests constuctor.
 	 */
 	@Test
-	public void testConstructor2() throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException {
-		final T exce = exceptionClass.getConstructor(String.class).newInstance(THE_MESSAGE);
-		Assert.assertEquals(THE_MESSAGE, exce.getMessage());
-		Assert.assertNull(exce.getCause());
+	public void testConstructor2() throws InstantiationException, IllegalAccessException, InvocationTargetException {
+		try {
+			final T exce = exceptionClass.getConstructor(String.class).newInstance(THE_MESSAGE);
+			Assert.assertEquals(THE_MESSAGE, exce.getMessage());
+			Assert.assertNull(exce.getCause());
+		} catch (final NoSuchMethodException e) {
+			// ignore
+		}
 	}
 
 	/**
@@ -81,11 +89,15 @@ public class ExceptionTestBase<T extends Throwable> {
 	 */
 	@Test
 	public void testConstructor3() throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException {
-		final Throwable cause = new IllegalStateException();
-		final T exce = exceptionClass.getConstructor(Throwable.class).newInstance(cause);
-		Assert.assertEquals(cause.toString(), exce.getMessage());
-		Assert.assertNotNull(exce.getCause());
-		Assert.assertEquals(cause, exce.getCause());
+		try {
+			final Throwable cause = new IllegalStateException();
+			final T exce = exceptionClass.getConstructor(Throwable.class).newInstance(cause);
+			Assert.assertEquals(cause.toString(), exce.getMessage());
+			Assert.assertNotNull(exce.getCause());
+			Assert.assertEquals(cause, exce.getCause());
+		} catch (final NoSuchMethodException e) {
+			// ignore
+		}
 	}
 
 	/**
@@ -93,10 +105,14 @@ public class ExceptionTestBase<T extends Throwable> {
 	 */
 	@Test
 	public void testConstructor4() throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException {
-		final Throwable cause = new IllegalStateException();
-		final T exce = exceptionClass.getConstructor(String.class, Throwable.class).newInstance(THE_MESSAGE, cause);
-		Assert.assertEquals(THE_MESSAGE, exce.getMessage());
-		Assert.assertNotNull(exce.getCause());
-		Assert.assertEquals(cause, exce.getCause());
+		try {
+			final Throwable cause = new IllegalStateException();
+			final T exce = exceptionClass.getConstructor(String.class, Throwable.class).newInstance(THE_MESSAGE, cause);
+			Assert.assertEquals(THE_MESSAGE, exce.getMessage());
+			Assert.assertNotNull(exce.getCause());
+			Assert.assertEquals(cause, exce.getCause());
+		} catch (final NoSuchMethodException e) {
+			// ignore
+		}
 	}
 }
