@@ -27,7 +27,7 @@ Maven dependency:
 <dependency>
     <groupId>de.mklinger.commons</groupId>
     <artifactId>junit-support</artifactId>
-    <version>0.10</version>
+    <version>0.12</version>
 </dependency>
 ```
 
